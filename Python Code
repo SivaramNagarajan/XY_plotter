@@ -1,0 +1,31 @@
+import cv2
+import numpy as np
+import serial
+import time
+
+# --- Settings ---
+ARDUINO_PORT = 'COM3'  # Replace with your port
+BAUD_RATE = 115200
+PLOTTER_SIZE = 200  # max X/Y steps
+IMAGE_PATH = 'photo.jpg'
+
+# --- Connect to Arduino ---
+ser = serial.Serial(ARDUINO_PORT, BAUD_RATE)
+time.sleep(2)  # Wait for Arduino
+
+# --- Load and process image ---
+img = cv2.imread(IMAGE_PATH, cv2.IMREAD_GRAYSCALE)
+img = cv2.resize(img, (PLOTTER_SIZE, PLOTTER_SIZE))
+edges = cv2.Canny(img, 100, 200)
+
+coords = np.column_stack(np.where(edges > 0))
+coords[:, [0, 1]] = coords[:, [1, 0]]  # Swap to X,Y
+
+# --- Send commands to Arduino ---
+for x, y in coords:
+    ser.write(f"{x},{y},DOWN\n".encode())
+    time.sleep(0.01)
+    ser.write(f"{x},{y},UP\n".encode())
+    time.sleep(0.01)
+
+ser.close()
